@@ -1,1 +1,4 @@
 *.o
+*.tar.gz
+*.tar.xz
+*.zip
