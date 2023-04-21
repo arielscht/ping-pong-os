@@ -80,10 +80,6 @@ void task_exit(int exit_code)
     }
     else
     {
-        if (current_task->context.uc_stack.ss_sp != NULL)
-        {
-            free(current_task->context.uc_stack.ss_sp);
-        }
         task_switch(&main_task);
     }
 }
