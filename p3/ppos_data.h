@@ -9,6 +9,15 @@
 
 #include <ucontext.h> // biblioteca POSIX de trocas de contexto
 
+// enum do status da task
+typedef enum task_status
+{
+    READY = 0,
+    EXECUTING = 1,
+    SUSPENDED = 2,
+    TERMINATED = 3,
+} task_status;
+
 // Estrutura que define um Task Control Block (TCB)
 typedef struct task_t
 {
@@ -41,13 +50,5 @@ typedef struct
 {
     // preencher quando necessário
 } mqueue_t;
-
-typedef enum
-{
-    READY = 0,
-    EXECUTING = 1,
-    SUSPENDED = 2,
-    TERMINATED = 3,
-} task_status;
 
 #endif
