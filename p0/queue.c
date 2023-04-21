@@ -41,6 +41,7 @@ void queue_print(char *name, queue_t *queue, void print_elem(void *))
         return;
     }
 
+    printf("%s", name);
     do
     {
         print_elem(cur_element);
