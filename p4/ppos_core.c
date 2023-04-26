@@ -1,3 +1,5 @@
+// GRR20203949 Ariel Evaldt Schmitt
+
 #include <stdio.h>
 #include <ucontext.h>
 #include <stdlib.h>
