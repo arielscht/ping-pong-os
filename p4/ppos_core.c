@@ -183,7 +183,7 @@ void task_setprio(task_t *task, int prio)
 {
     if (prio < PRIO_LOWER_BOUND || prio > PRIO_UPPER_BOUND)
     {
-        fprintf(stderr, "task_setprio: invalid priority value for task %d. It should be from -20 to 20.\n", task->id);
+        fprintf(stderr, "task_setprio: invalid priority value for task %d. It should be from %d to %d.\n", task->id, PRIO_LOWER_BOUND, PRIO_UPPER_BOUND);
         return;
     }
 
