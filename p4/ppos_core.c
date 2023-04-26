@@ -26,15 +26,31 @@ void free_task_stack(task_t *task)
 
 task_t *scheduler()
 {
+    task_t *cur_task;
     task_t *next_task;
+    short most_prioritary = PRIO_UPPER_BOUND + 1;
 
     if (queue_size(ready_queue) == 0)
     {
         return NULL;
     }
 
-    next_task = (task_t *)ready_queue;
-    ready_queue = ready_queue->next;
+    cur_task = (task_t *)ready_queue;
+    do
+    {
+        if (cur_task->dynamic_prio < most_prioritary)
+        {
+            next_task = cur_task;
+            most_prioritary = next_task->dynamic_prio;
+        }
+        if (cur_task->dynamic_prio > -20)
+        {
+            cur_task->dynamic_prio -= 1;
+        }
+        cur_task = cur_task->next;
+    } while (cur_task != (task_t *)ready_queue);
+
+    next_task->dynamic_prio = next_task->static_prio;
     return next_task;
 }
 
@@ -99,6 +115,8 @@ int task_init(task_t *task, void (*start_routine)(void *), void *arg)
 
     task->id = incremental_id;
     task->status = READY;
+    task->static_prio = 0;
+    task->dynamic_prio = 0;
     incremental_id++;
 
 #ifdef DEBUG
@@ -155,5 +173,33 @@ int task_id()
 
 void task_yield()
 {
+#ifdef DEBUG
+    printf("task_yield: task %d yielded the CPU\n", current_task->id);
+#endif
     task_switch(&dispatcher_task);
+}
+
+void task_setprio(task_t *task, int prio)
+{
+    if (prio < PRIO_LOWER_BOUND || prio > PRIO_UPPER_BOUND)
+    {
+        fprintf(stderr, "task_setprio: invalid priority value for task %d. It should be from -20 to 20.\n", task->id);
+        return;
+    }
+
+#ifdef DEBUG
+    printf("task_setprio: task %d priority set to %d\n", task->id, prio);
+#endif
+
+    task->static_prio = prio;
+    task->dynamic_prio = prio;
+}
+
+int task_getprio(task_t *task)
+{
+    if (task != NULL)
+    {
+        return task->static_prio;
+    }
+    return current_task->static_prio;
 }

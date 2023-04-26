@@ -9,6 +9,9 @@
 
 #include <ucontext.h> // biblioteca POSIX de trocas de contexto
 
+#define PRIO_UPPER_BOUND 20
+#define PRIO_LOWER_BOUND -20
+
 // enum do status da task
 typedef enum task_status
 {
@@ -25,6 +28,8 @@ typedef struct task_t
     int id;                     // identificador da tarefa
     ucontext_t context;         // contexto armazenado da tarefa
     task_status status;         // pronta, rodando, suspensa, ...
+    short static_prio;          // prioridade estática da task
+    short dynamic_prio;         // prioridade dinâmica da task
 } task_t;
 
 // estrutura que define um semáforo
