@@ -39,6 +39,9 @@ typedef struct task_t
     short dynamic_prio;         // prioridade dinâmica da task
     short quantum;              // contador de quantum da task
     task_owner type;            // tipo da tarefa
+    unsigned int start_time;    // tempo de criação da tarefa
+    unsigned int cpu_time;      // tempo de cpu da tarefa
+    unsigned int activations;   // numero de ativações da tarefa
 } task_t;
 
 // estrutura que define um semáforo

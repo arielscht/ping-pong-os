@@ -22,6 +22,7 @@ queue_t *ready_queue;
 
 struct itimerval system_clock;
 struct sigaction clock_action;
+unsigned int system_time = 0;
 
 void free_task_stack(task_t *task)
 {
@@ -33,6 +34,7 @@ void free_task_stack(task_t *task)
 
 void clock_handler()
 {
+    system_time += 1;
     if (current_task && current_task->type == USER)
     {
         if (current_task->quantum == 0)
@@ -102,6 +104,7 @@ task_t *scheduler()
 void dispatcher()
 {
     task_t *next_task;
+    unsigned int task_start_time;
 
     while (queue_size(ready_queue) > 0)
     {
@@ -109,7 +112,9 @@ void dispatcher()
 
         if (next_task != NULL)
         {
+            task_start_time = system_time;
             task_switch(next_task);
+            next_task->cpu_time += system_time - task_start_time;
 
             switch (next_task->status)
             {
@@ -166,6 +171,8 @@ int task_init(task_t *task, void (*start_routine)(void *), void *arg)
     task->status = READY;
     task->static_prio = 0;
     task->dynamic_prio = 0;
+    task->activations = 0;
+    task->start_time = system_time;
     incremental_id++;
 
 #ifdef DEBUG
@@ -192,6 +199,7 @@ int task_switch(task_t *task)
     printf("task_switch: switching context %d -> %d\n", current_task->id, task->id);
 #endif
     task->quantum = TASK_QUANTUM;
+    task->activations += 1;
     aux = current_task;
     current_task = task;
     swapcontext(&aux->context, &task->context);
@@ -204,6 +212,8 @@ void task_exit(int exit_code)
     printf("task_exit: exiting task %d\n", current_task->id);
 #endif
 
+    unsigned int task_life_time = system_time - current_task->start_time;
+    printf("Task %d exit: execution time %d ms, processor time %d ms, %d activations\n", current_task->id, task_life_time, current_task->cpu_time, current_task->activations);
     if (current_task == &dispatcher_task)
     {
         free_task_stack(&dispatcher_task);
@@ -252,4 +262,9 @@ int task_getprio(task_t *task)
         return task->static_prio;
     }
     return current_task->static_prio;
+}
+
+unsigned int systime()
+{
+    return system_time;
 }
