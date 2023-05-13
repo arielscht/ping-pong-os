@@ -1,18 +1,24 @@
 CFLAGS = -Wall
 PPOS_OBJECTS = ppos_core.o queue.o
-TEST_OBJETCS = $(PPOS_OBJECTS) test.o
+TEST_OBJECTS = $(PPOS_OBJECTS) test.o
+STRESS_TEST_OBJECTS = $(PPOS_OBJECTS) stress_test.o
 
-all: test
+all: test stress_test
 
 debug: CFLAGS += -DDEBUG -g 
-debug: test
+debug: test stress_test
 
-test: $(TEST_OBJETCS)
-	gcc $(TEST_OBJETCS) -o test $(CFLAGS)
+test: $(TEST_OBJECTS)
+	gcc $(TEST_OBJECTS) -o test $(CFLAGS)
 
+stress_test: $(STRESS_TEST_OBJECTS)
+	gcc $(STRESS_TEST_OBJECTS) -o stress_test $(CFLAGS)
 
 test.o: test.c
 	gcc -c test.c -o test.o $(CFLAGS)
+
+stress_test.o: stress_test.c
+	gcc -c stress_test.c -o stress_test.o $(CFLAGS)
 
 ppos_core.o: ppos_core.c ppos_data.h ppos.h
 	gcc -c ppos_core.c $(CFLAGS)
