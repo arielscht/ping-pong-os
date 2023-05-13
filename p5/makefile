@@ -30,4 +30,4 @@ clean:
 		rm -f *.o
 
 purge:  clean
-		rm -f test
+		rm -f test stress_test
