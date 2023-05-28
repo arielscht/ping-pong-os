@@ -346,10 +346,12 @@ void task_suspend(task_t **queue)
         perror("task_suspend: the suspended queue is NULL\n");
         return;
     }
-    queue_remove((queue_t **)&ready_queue, (queue_t *)current_task);
-    current_task->status = SUSPENDED;
-    queue_append((queue_t **)queue, (queue_t *)current_task);
-    task_yield();
+    if (queue_remove((queue_t **)&ready_queue, (queue_t *)current_task) == 0)
+    {
+        current_task->status = SUSPENDED;
+        queue_append((queue_t **)queue, (queue_t *)current_task);
+        task_yield();
+    }
 }
 
 void task_resume(task_t *task, task_t **queue)
