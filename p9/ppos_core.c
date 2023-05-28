@@ -19,7 +19,7 @@ task_t *current_task = &main_task;
 int incremental_id = 1;
 int tasks_quantity = 1; // starts with 1 due to the main function
 
-task_t *ready_queue, *suspended_queue;
+task_t *ready_queue, *suspended_queue, *sleep_queue;
 
 struct itimerval system_clock;
 struct sigaction clock_action;
@@ -37,6 +37,11 @@ int task_find(task_t *queue, task_t *task)
 {
     task_t *cur_element = queue;
     task_t *initial_element = queue;
+
+    if (queue == NULL)
+    {
+        return -1;
+    }
 
     do
     {
@@ -70,6 +75,32 @@ void resume_waiting_tasks()
     } while (cur_element != initial_element);
 }
 
+void resume_sleeping_tasks()
+{
+    task_t *cur_element = sleep_queue;
+    task_t *initial_element = sleep_queue;
+    task_t *next_element = NULL;
+
+    if (queue_size((queue_t *)sleep_queue) == 0)
+    {
+        return;
+    }
+
+    do
+    {
+        next_element = cur_element->next;
+        if (system_time >= cur_element->wake_time)
+        {
+            if (cur_element == initial_element)
+            {
+                initial_element = next_element;
+            }
+            task_resume(cur_element, &sleep_queue);
+        }
+        cur_element = next_element;
+    } while (cur_element != initial_element);
+}
+
 void clock_handler()
 {
     system_time += 1;
@@ -77,7 +108,7 @@ void clock_handler()
     {
         if (current_task->quantum == 0)
         {
-            task_switch(&dispatcher_task);
+            task_yield();
         }
         else
         {
@@ -142,7 +173,6 @@ task_t *scheduler()
 void dispatcher()
 {
     task_t *next_task;
-    unsigned int task_start_time;
 
     while (tasks_quantity > 0)
     {
@@ -150,9 +180,7 @@ void dispatcher()
 
         if (next_task != NULL)
         {
-            task_start_time = system_time;
             task_switch(next_task);
-            next_task->cpu_time += system_time - task_start_time;
 
             switch (next_task->status)
             {
@@ -164,6 +192,7 @@ void dispatcher()
                 break;
             }
         }
+        resume_sleeping_tasks();
     }
 
     task_exit(0);
@@ -179,7 +208,7 @@ void ppos_init()
     main_task.id = MAIN_ID;
     main_task.status = READY;
     queue_append((queue_t **)&ready_queue, (queue_t *)&main_task);
-    task_switch(&dispatcher_task);
+    task_yield();
 }
 
 int task_init(task_t *task, void (*start_routine)(void *), void *arg)
@@ -211,6 +240,7 @@ int task_init(task_t *task, void (*start_routine)(void *), void *arg)
     task->dynamic_prio = 0;
     task->activations = 0;
     task->start_time = system_time;
+    task->last_cpu_time = 0;
     incremental_id++;
 
 #ifdef DEBUG
@@ -240,7 +270,12 @@ int task_switch(task_t *task)
     task->quantum = TASK_QUANTUM;
     task->activations += 1;
     aux = current_task;
+    if (aux->activations > 0)
+    {
+        aux->cpu_time += system_time - aux->last_cpu_time;
+    }
     current_task = task;
+    current_task->last_cpu_time = system_time;
     swapcontext(&aux->context, &task->context);
     return 0;
 }
@@ -263,7 +298,7 @@ void task_exit(int exit_code)
         current_task->status = TERMINATED;
         tasks_quantity--;
         resume_waiting_tasks();
-        task_switch(&dispatcher_task);
+        task_yield();
     }
 }
 
@@ -322,7 +357,7 @@ int task_wait(task_t *task)
     {
         perror("task_wait: task pointer is NULL");
     }
-    else if (task_find(ready_queue, task) == 0 || task_find(suspended_queue, task) == 0)
+    else if (task_find(ready_queue, task) == 0 || task_find(suspended_queue, task) == 0 || task_find(sleep_queue, task) == 0)
     {
         current_task->wait_task = task;
         task_suspend(&suspended_queue);
@@ -346,20 +381,29 @@ void task_suspend(task_t **queue)
         perror("task_suspend: the suspended queue is NULL\n");
         return;
     }
-    queue_remove((queue_t **)&ready_queue, (queue_t *)current_task);
-    current_task->status = SUSPENDED;
-    queue_append((queue_t **)queue, (queue_t *)current_task);
-    task_yield();
+    if (queue_remove((queue_t **)&ready_queue, (queue_t *)current_task) == 0)
+    {
+        if (queue == &sleep_queue)
+        {
+            current_task->status = SLEEPING;
+        }
+        else
+        {
+            current_task->status = SUSPENDED;
+        }
+        queue_append((queue_t **)queue, (queue_t *)current_task);
+        task_yield();
+    }
 }
 
 void task_resume(task_t *task, task_t **queue)
 {
 #ifdef DEBUG
-    printf("task_resume: task %d was resumed\n", current_task->id);
+    printf("task_resume: task %d was resumed\n", task->id);
 #endif
     if (!queue)
     {
-        perror("task_suspend: the suspended queue is NULL\n");
+        perror("task_resume: the queue is NULL\n");
         return;
     }
     if (queue_remove((queue_t **)queue, (queue_t *)task) == 0)
@@ -367,4 +411,13 @@ void task_resume(task_t *task, task_t **queue)
         task->status = READY;
         queue_append((queue_t **)&ready_queue, (queue_t *)task);
     }
+}
+
+void task_sleep(int time)
+{
+    current_task->wake_time = system_time + time;
+#ifdef DEBUG
+    printf("task_sleep: task %d went to sleep %dms wake system time is %dms\n", current_task->id, time, current_task->wake_time);
+#endif
+    task_suspend(&sleep_queue);
 }

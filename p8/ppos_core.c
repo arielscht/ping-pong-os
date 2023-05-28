@@ -38,6 +38,11 @@ int task_find(task_t *queue, task_t *task)
     task_t *cur_element = queue;
     task_t *initial_element = queue;
 
+    if (queue == NULL)
+    {
+        return -1;
+    }
+
     do
     {
         if (cur_element == task)

@@ -19,7 +19,8 @@ typedef enum task_status
     READY = 0,
     EXECUTING = 1,
     SUSPENDED = 2,
-    TERMINATED = 3,
+    SLEEPING = 3,
+    TERMINATED = 4,
 } task_status;
 
 typedef enum task_owner
@@ -41,6 +42,8 @@ typedef struct task_t
     task_owner type;            // tipo da tarefa
     unsigned int start_time;    // tempo de criação da tarefa
     unsigned int cpu_time;      // tempo de cpu da tarefa
+    unsigned int last_cpu_time; // tempo de início da última execução
+    unsigned int wake_time;     // hora da tarefa acordar
     unsigned int activations;   // numero de ativações da tarefa
     struct task_t *wait_task;   // task que está sendo aguardada
     int exit_code;              // task exit code
