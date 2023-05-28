@@ -364,10 +364,6 @@ int task_wait(task_t *task)
         exit_code = current_task->wait_task->exit_code;
         current_task->wait_task = NULL;
     }
-    else
-    {
-        perror("task_wait: task not found");
-    }
     return exit_code;
 }
 
