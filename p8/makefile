@@ -1,24 +1,17 @@
 CFLAGS = -Wall
 PPOS_OBJECTS = ppos_core.o queue.o
-TEST1_OBJECTS = $(PPOS_OBJECTS) test1.o
-TEST2_OBJECTS = $(PPOS_OBJECTS) test2.o
+TEST_OBJECTS = $(PPOS_OBJECTS) test.o
 
-all: test1 test2
+all: test
 
 debug: CFLAGS += -DDEBUG -g 
-debug: test1 test2
+debug: test
 
-test1: $(TEST1_OBJECTS)
-	gcc $(TEST1_OBJECTS) -o test1 $(CFLAGS)
-
-test2: $(TEST2_OBJECTS)
-	gcc $(TEST2_OBJECTS) -o test2 $(CFLAGS)
+test: $(TEST_OBJECTS)
+	gcc $(TEST_OBJECTS) -o test $(CFLAGS)
 
 test1.o: test1.c
-	gcc -c test1.c -o test1.o $(CFLAGS)
-
-test2.o: test2.c
-	gcc -c test2.c -o test2.o $(CFLAGS)
+	gcc -c test.c -o test.o $(CFLAGS)
 
 ppos_core.o: ppos_core.c ppos_data.h ppos.h
 	gcc -c ppos_core.c $(CFLAGS)
@@ -30,4 +23,4 @@ clean:
 		rm -f *.o
 
 purge:  clean
-		rm -f test1 test2
+		rm -f test

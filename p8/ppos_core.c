@@ -17,8 +17,9 @@
 task_t main_task, dispatcher_task;
 task_t *current_task = &main_task;
 int incremental_id = 1;
+int tasks_quantity = 1; // starts with 1 due to the main function
 
-queue_t *ready_queue;
+task_t *ready_queue, *suspended_queue;
 
 struct itimerval system_clock;
 struct sigaction clock_action;
@@ -30,6 +31,43 @@ void free_task_stack(task_t *task)
     {
         free(task->context.uc_stack.ss_sp);
     }
+}
+
+int task_find(task_t *queue, task_t *task)
+{
+    task_t *cur_element = queue;
+    task_t *initial_element = queue;
+
+    do
+    {
+        if (cur_element == task)
+        {
+            return 0;
+        }
+        cur_element = cur_element->next;
+    } while (cur_element != initial_element);
+
+    return -1;
+}
+
+void resume_waiting_tasks()
+{
+    task_t *cur_element = suspended_queue;
+    task_t *initial_element = suspended_queue;
+
+    if (suspended_queue == NULL)
+    {
+        return;
+    }
+
+    do
+    {
+        if (cur_element->wait_task == current_task)
+        {
+            task_resume(cur_element, &suspended_queue);
+        }
+        cur_element = cur_element->next;
+    } while (cur_element != initial_element);
 }
 
 void clock_handler()
@@ -77,7 +115,7 @@ task_t *scheduler()
     task_t *next_task;
     short most_prioritary = PRIO_UPPER_BOUND + 1;
 
-    if (queue_size(ready_queue) == 0)
+    if (queue_size((queue_t *)ready_queue) == 0)
     {
         return NULL;
     }
@@ -106,7 +144,7 @@ void dispatcher()
     task_t *next_task;
     unsigned int task_start_time;
 
-    while (queue_size(ready_queue) > 0)
+    while (tasks_quantity > 0)
     {
         next_task = scheduler();
 
@@ -181,6 +219,7 @@ int task_init(task_t *task, void (*start_routine)(void *), void *arg)
     if (task != &dispatcher_task)
     {
         queue_append((queue_t **)&ready_queue, (queue_t *)task);
+        tasks_quantity++;
     }
     return task->id;
 }
@@ -211,7 +250,7 @@ void task_exit(int exit_code)
 #ifdef DEBUG
     printf("task_exit: exiting task %d\n", current_task->id);
 #endif
-
+    current_task->exit_code = exit_code;
     unsigned int task_life_time = system_time - current_task->start_time;
     printf("Task %d exit: execution time %d ms, processor time %d ms, %d activations\n", current_task->id, task_life_time, current_task->cpu_time, current_task->activations);
     if (current_task == &dispatcher_task)
@@ -222,6 +261,8 @@ void task_exit(int exit_code)
     else
     {
         current_task->status = TERMINATED;
+        tasks_quantity--;
+        resume_waiting_tasks();
         task_switch(&dispatcher_task);
     }
 }
@@ -267,4 +308,63 @@ int task_getprio(task_t *task)
 unsigned int systime()
 {
     return system_time;
+}
+
+int task_wait(task_t *task)
+{
+    int exit_code = -1;
+
+#ifdef DEBUG
+    printf("task_wait: task %d waits for task %d\n", current_task->id, task->id);
+#endif
+
+    if (task == NULL)
+    {
+        perror("task_wait: task pointer is NULL");
+    }
+    else if (task_find(ready_queue, task) == 0 || task_find(suspended_queue, task) == 0)
+    {
+        current_task->wait_task = task;
+        task_suspend(&suspended_queue);
+        exit_code = current_task->wait_task->exit_code;
+        current_task->wait_task = NULL;
+    }
+    else
+    {
+        perror("task_wait: task not found");
+    }
+    return exit_code;
+}
+
+void task_suspend(task_t **queue)
+{
+#ifdef DEBUG
+    printf("task_suspend: task %d was suspended\n", current_task->id);
+#endif
+    if (!queue)
+    {
+        perror("task_suspend: the suspended queue is NULL\n");
+        return;
+    }
+    queue_remove((queue_t **)&ready_queue, (queue_t *)current_task);
+    current_task->status = SUSPENDED;
+    queue_append((queue_t **)queue, (queue_t *)current_task);
+    task_yield();
+}
+
+void task_resume(task_t *task, task_t **queue)
+{
+#ifdef DEBUG
+    printf("task_resume: task %d was resumed\n", current_task->id);
+#endif
+    if (!queue)
+    {
+        perror("task_suspend: the suspended queue is NULL\n");
+        return;
+    }
+    if (queue_remove((queue_t **)queue, (queue_t *)task) == 0)
+    {
+        task->status = READY;
+        queue_append((queue_t **)&ready_queue, (queue_t *)task);
+    }
 }
