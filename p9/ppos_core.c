@@ -33,28 +33,6 @@ void free_task_stack(task_t *task)
     }
 }
 
-int task_find(task_t *queue, task_t *task)
-{
-    task_t *cur_element = queue;
-    task_t *initial_element = queue;
-
-    if (queue == NULL)
-    {
-        return -1;
-    }
-
-    do
-    {
-        if (cur_element == task)
-        {
-            return 0;
-        }
-        cur_element = cur_element->next;
-    } while (cur_element != initial_element);
-
-    return -1;
-}
-
 void resume_waiting_tasks()
 {
     task_t *cur_element = suspended_queue;
@@ -357,7 +335,7 @@ int task_wait(task_t *task)
     {
         perror("task_wait: task pointer is NULL");
     }
-    else if (task_find(ready_queue, task) == 0 || task_find(suspended_queue, task) == 0 || task_find(sleep_queue, task) == 0)
+    else if (task->status != TERMINATED)
     {
         current_task->wait_task = task;
         task_suspend(&suspended_queue);
