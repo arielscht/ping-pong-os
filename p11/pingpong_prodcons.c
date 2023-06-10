@@ -57,7 +57,7 @@ int main()
 
     buffer_init(&buffer, BUFFER_CAPACITY, sizeof(int));
 
-    sem_init(&s_buffer, BUFFER_CAPACITY);
+    sem_init(&s_buffer, 1);
     sem_init(&s_items, 0);
     sem_init(&s_slots, BUFFER_CAPACITY);
 

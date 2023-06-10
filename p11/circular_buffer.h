@@ -1,6 +1,9 @@
+#ifndef __CIRCULAR_BUFFER__
+#define __CIRCULAR_BUFFER__
+
 typedef struct buffer_t
 {
-    void **items;
+    void *items;
     int head;
     int tail;
     int size;
@@ -14,3 +17,5 @@ void buffer_add(buffer_t *buffer, void *item);
 void buffer_remove(buffer_t *buffer, void *item);
 
 int buffer_destroy(buffer_t *buffer);
+
+#endif

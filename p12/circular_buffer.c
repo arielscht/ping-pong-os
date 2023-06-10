@@ -19,12 +19,12 @@ int buffer_init(buffer_t *buffer, int buffer_size, int item_size)
 void buffer_add(buffer_t *buffer, void *item)
 {
     buffer->tail = (buffer->tail + 1) % buffer->size;
-    bcopy(item, &buffer->items[buffer->tail], buffer->item_size);
+    bcopy(item, (char *)buffer->items + buffer->item_size * buffer->tail, buffer->item_size);
 }
 
 void buffer_remove(buffer_t *buffer, void *item)
 {
-    void *item_to_remove = &buffer->items[buffer->head];
+    void *item_to_remove = (char *)buffer->items + buffer->item_size * buffer->head;
     buffer->head = (buffer->head + 1) % buffer->size;
     bcopy(item_to_remove, item, buffer->item_size);
 }
