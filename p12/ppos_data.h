@@ -8,6 +8,7 @@
 #define __PPOS_DATA__
 
 #include <ucontext.h> // biblioteca POSIX de trocas de contexto
+#include "circular_buffer.h"
 
 #define PRIO_UPPER_BOUND 20
 #define PRIO_LOWER_BOUND -20
@@ -73,7 +74,10 @@ typedef struct
 // estrutura que define uma fila de mensagens
 typedef struct
 {
-    // preencher quando necessário
+    buffer_t buffer;
+    semaphore_t slots_semaphore;
+    semaphore_t buffer_semaphore;
+    semaphore_t items_semaphore;
 } mqueue_t;
 
 #endif

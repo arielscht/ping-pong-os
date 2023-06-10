@@ -457,3 +457,107 @@ int sem_destroy(semaphore_t *semaphore)
     }
     return 0;
 }
+
+int mqueue_is_destroyed(mqueue_t *queue)
+{
+    if (
+        queue->buffer_semaphore.destroyed ||
+        queue->items_semaphore.destroyed ||
+        queue->slots_semaphore.destroyed)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+int mqueue_init(mqueue_t *queue, int max_msgs, int msg_size)
+{
+    if (buffer_init(&queue->buffer, max_msgs, msg_size))
+    {
+        return -1;
+    }
+    sem_init(&queue->buffer_semaphore, 1);
+    sem_init(&queue->items_semaphore, 0);
+    sem_init(&queue->slots_semaphore, max_msgs);
+    return 0;
+}
+
+int mqueue_send(mqueue_t *queue, void *msg)
+{
+    if (mqueue_is_destroyed(queue))
+    {
+        return -1;
+    }
+
+    if (sem_down(&queue->slots_semaphore) || sem_down(&queue->buffer_semaphore))
+    {
+        return -1;
+    }
+    buffer_add(&queue->buffer, msg);
+    if (sem_up(&queue->buffer_semaphore) || sem_up(&queue->items_semaphore))
+    {
+        return -1;
+    }
+    return 0;
+}
+
+int mqueue_recv(mqueue_t *queue, void *msg)
+{
+    if (mqueue_is_destroyed(queue))
+    {
+        return -1;
+    }
+
+    if (sem_down(&queue->items_semaphore) || sem_down(&queue->buffer_semaphore))
+    {
+        return -1;
+    }
+    buffer_remove(&queue->buffer, msg);
+    if (sem_up(&queue->buffer_semaphore) || sem_up(&queue->slots_semaphore))
+    {
+        return -1;
+    }
+    return 0;
+}
+
+int mqueue_destroy(mqueue_t *queue)
+{
+#ifdef DEBUG
+    printf("mqueue_destroy: message queue destroy requested\n");
+#endif
+    if (mqueue_is_destroyed(queue))
+    {
+        return -1;
+    }
+
+    if (buffer_destroy(&queue->buffer))
+    {
+        return -1;
+    }
+
+    if (
+        sem_destroy(&queue->buffer_semaphore) ||
+        sem_destroy(&queue->slots_semaphore) ||
+        sem_destroy(&queue->items_semaphore))
+    {
+        return -1;
+    }
+    return 0;
+}
+
+int mqueue_msgs(mqueue_t *queue)
+{
+    int items;
+    if (mqueue_is_destroyed(queue))
+    {
+        return -1;
+    }
+
+    items = queue->items_semaphore.slots;
+    if (items <= 0)
+    {
+        return 0;
+    }
+
+    return items;
+}

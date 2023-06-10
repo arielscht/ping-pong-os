@@ -1,4 +1,4 @@
-CFLAGS = -Wall
+CFLAGS = -Wall -lm
 PPOS_OBJECTS = ppos_core.o queue.o circular_buffer.o
 TEST_OBJECTS = $(PPOS_OBJECTS) test.o
 
