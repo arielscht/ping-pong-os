@@ -1,5 +1,5 @@
 CFLAGS = -Wall
-PPOS_OBJECTS = ppos_core.o queue.o
+PPOS_OBJECTS = ppos_core.o queue.o circular_buffer.o
 TEST_OBJECTS = $(PPOS_OBJECTS) test.o
 
 all: test
@@ -18,6 +18,9 @@ ppos_core.o: ppos_core.c ppos_data.h ppos.h
 
 queue.o: queue.c queue.h
 	gcc -c queue.c -o queue.o $(CFLAGS)
+
+circular_buffer.o: circular_buffer.c circular_buffer.h
+	gcc -c circular_buffer.c -o circular_buffer.o $(CFLAGS)
 
 clean: 
 		rm -f *.o
