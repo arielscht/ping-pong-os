@@ -26,7 +26,7 @@ void producer(void *arg)
 
         sem_down(&s_slots);
         sem_down(&s_buffer);
-        buffer_add(&buffer, item);
+        buffer_add(&buffer, &item);
         sem_up(&s_buffer);
         sem_up(&s_items);
 
@@ -41,7 +41,7 @@ void consumer(void *arg)
     {
         sem_down(&s_items);
         sem_down(&s_buffer);
-        item = buffer_remove(&buffer);
+        buffer_remove(&buffer, &item);
         sem_up(&s_buffer);
         sem_up(&s_slots);
 
