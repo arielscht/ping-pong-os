@@ -19,7 +19,7 @@ task_t *current_task = &main_task;
 int incremental_id = 1;
 int tasks_quantity = 1; // starts with 1 due to the main function
 
-task_t *ready_queue, *suspended_queue, *sleep_queue;
+task_t *ready_queue, *suspended_queue, *sleep_queue, *drivers_queue;
 
 struct itimerval system_clock;
 struct sigaction clock_action;
@@ -350,18 +350,22 @@ void task_suspend(task_t **queue)
 #ifdef DEBUG
     printf("task_suspend: task %d was suspended\n", current_task->id);
 #endif
+    task_t **task_queue = queue;
     if (!queue)
     {
-        perror("task_suspend: the suspended queue is NULL\n");
-        return;
+#ifdef DEBUG
+        perror("task_suspend: the suspended queue is NULL, so I'm using the suspended_queue\n");
+#endif
+        task_queue = &suspended_queue;
     }
+
     if (queue_remove((queue_t **)&ready_queue, (queue_t *)current_task) == 0)
     {
-        if (queue == &sleep_queue)
+        if (task_queue == &sleep_queue)
         {
             current_task->status = SLEEPING;
         }
-        else if (queue == &suspended_queue)
+        else if (task_queue == &suspended_queue)
         {
             current_task->status = SUSPENDED;
         }
@@ -369,7 +373,7 @@ void task_suspend(task_t **queue)
         {
             current_task->status = LOCKED;
         }
-        queue_append((queue_t **)queue, (queue_t *)current_task);
+        queue_append((queue_t **)task_queue, (queue_t *)current_task);
         task_yield();
     }
 }
@@ -379,12 +383,15 @@ void task_resume(task_t *task, task_t **queue)
 #ifdef DEBUG
     printf("task_resume: task %d was resumed\n", task->id);
 #endif
+    task_t **task_queue = queue;
     if (!queue)
     {
-        perror("task_resume: the queue is NULL\n");
-        return;
+#ifdef DEBUG
+        perror("task_resume: the queue is NULL, so I'm using the suspended_queue\n");
+#endif
+        task_queue = &suspended_queue;
     }
-    if (queue_remove((queue_t **)queue, (queue_t *)task) == 0)
+    if (queue_remove((queue_t **)task_queue, (queue_t *)task) == 0)
     {
         task->status = READY;
         queue_append((queue_t **)&ready_queue, (queue_t *)task);

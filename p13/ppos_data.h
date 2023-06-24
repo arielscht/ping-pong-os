@@ -17,12 +17,13 @@
 // enum do status da task
 typedef enum task_status
 {
-    READY = 0,      // Ready to execute
-    EXECUTING = 1,  // Executing
-    SUSPENDED = 2,  // Task is waiting for another task to finish
-    SLEEPING = 3,   // Task is sleeping
-    LOCKED = 4,     // Task is waiting for a semaphore
-    TERMINATED = 5, // Task has terminated its execution
+    READY = 0,            // Ready to execute
+    EXECUTING = 1,        // Executing
+    SUSPENDED = 2,        // Task is waiting for another task to finish
+    DRIVER_SUSPENDED = 3, // Task is a driver and it is suspended
+    SLEEPING = 4,         // Task is sleeping
+    LOCKED = 5,           // Task is waiting for a semaphore
+    TERMINATED = 6,       // Task has terminated its execution
 } task_status;
 
 typedef enum task_owner
@@ -50,6 +51,8 @@ typedef struct task_t
     struct task_t *wait_task;   // task que está sendo aguardada
     int exit_code;              // task exit code
 } task_t;
+
+extern task_t *drivers_queue;
 
 // estrutura que define um semáforo
 typedef struct
