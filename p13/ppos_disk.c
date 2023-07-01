@@ -14,10 +14,13 @@ struct sigaction disk_action;
 
 void disk_handler()
 {
+#ifdef DEBUG
+    printf("disk_handler: signal received\n");
+#endif
     disk.signal_received = 1;
-    if (disk_task.status == SUSPENDED)
+    if (disk_task.status == DRIVER_SUSPENDED)
     {
-        task_resume(&disk_task, NULL); // By default it will use the suspended_queue
+        task_resume(&disk_task, &drivers_queue); // By default it will use the suspended_queue
     }
 }
 
@@ -36,27 +39,30 @@ void init_disk_signal()
 void disk_driver(void *args)
 {
     disk_req_t *request;
-    task_t *task;
 
-    for (;;)
+    while (finish_drivers() == 0)
     {
-        request = disk.req_queue;
-        task = disk.queue;
-
         sem_down(&disk.semaphore);
 
         if (disk.signal_received)
         {
             if (queue_remove((queue_t **)&disk.req_queue, (queue_t *)request) == 0)
             {
+#ifdef DEBUG
+                printf("disk_driver: resume task %d\n", disk.queue->id);
+#endif
                 free(request);
-                task_resume(task, &disk.queue);
+                task_resume(disk.queue, &disk.queue);
+                disk.signal_received = 0;
             }
-            disk.signal_received = 0;
         }
 
         if (disk_cmd(DISK_CMD_STATUS, 0, 0) == DISK_STATUS_IDLE && disk.queue != NULL)
         {
+            request = disk.req_queue;
+#ifdef DEBUG
+            printf("disk_driver: handle operation %d of task %d\n", request->operation, disk.queue->id);
+#endif
             switch (request->operation)
             {
             case READ:
@@ -71,7 +77,7 @@ void disk_driver(void *args)
         }
 
         sem_up(&disk.semaphore);
-        task_suspend(NULL); // By default it will use the suspended_queue
+        task_suspend(&drivers_queue); // By default it will use the suspended_queue
     }
 
     task_exit(0);
@@ -79,6 +85,9 @@ void disk_driver(void *args)
 
 int disk_mgr_init(int *numBlocks, int *blockSize)
 {
+#ifdef DEBUG
+    printf("disk_mgr_init: initialize disk\n");
+#endif
     int disk_size, disk_block_size;
     if (disk_cmd(DISK_CMD_INIT, 0, 0))
     {
@@ -101,10 +110,14 @@ int disk_mgr_init(int *numBlocks, int *blockSize)
     *blockSize = disk_block_size;
 
     sem_init(&disk.semaphore, 1);
+    disk.signal_received = 0;
+    disk.queue = NULL;
+    disk.req_queue = NULL;
     init_disk_signal();
 
     task_init(&disk_task, disk_driver, NULL);
     disk_task.type = SYSTEM;
+    drivers_quantity++;
 
     return 0;
 }
@@ -129,9 +142,9 @@ int disk_block_read(int block, void *buffer)
         return -1;
     }
 
-    if (disk_task.status == SUSPENDED)
+    if (disk_task.status == DRIVER_SUSPENDED)
     {
-        task_resume(&disk_task, NULL);
+        task_resume(&disk_task, &drivers_queue);
     }
 
     sem_up(&disk.semaphore);
@@ -161,9 +174,9 @@ int disk_block_write(int block, void *buffer)
         return -1;
     }
 
-    if (disk_task.status == SUSPENDED)
+    if (disk_task.status == DRIVER_SUSPENDED)
     {
-        task_resume(&disk_task, NULL);
+        task_resume(&disk_task, &drivers_queue);
     }
 
     sem_up(&disk.semaphore);

@@ -18,6 +18,7 @@ task_t main_task, dispatcher_task;
 task_t *current_task = &main_task;
 int incremental_id = 1;
 int tasks_quantity = 1; // starts with 1 due to the main function
+int drivers_quantity = 0;
 
 task_t *ready_queue, *suspended_queue, *sleep_queue, *drivers_queue;
 
@@ -31,6 +32,23 @@ void free_task_stack(task_t *task)
     {
         free(task->context.uc_stack.ss_sp);
     }
+}
+
+void resume_drivers()
+{
+    task_t *cur_element = drivers_queue;
+    task_t *initial_element = drivers_queue;
+
+    if (drivers_queue == NULL)
+    {
+        return;
+    }
+
+    do
+    {
+        task_resume(cur_element, &drivers_queue);
+        cur_element = cur_element->next;
+    } while (cur_element != initial_element);
 }
 
 void resume_waiting_tasks()
@@ -171,6 +189,9 @@ void dispatcher()
             }
         }
         resume_sleeping_tasks();
+
+        if (finish_drivers())
+            resume_drivers();
     }
 
     task_exit(0);
@@ -368,6 +389,10 @@ void task_suspend(task_t **queue)
         else if (task_queue == &suspended_queue)
         {
             current_task->status = SUSPENDED;
+        }
+        else if (task_queue == &drivers_queue)
+        {
+            current_task->status = DRIVER_SUSPENDED;
         }
         else
         {
@@ -567,4 +592,13 @@ int mqueue_msgs(mqueue_t *queue)
     }
 
     return items;
+}
+
+int finish_drivers()
+{
+    if (tasks_quantity - drivers_quantity <= 0)
+    {
+        return 1;
+    }
+    return 0;
 }

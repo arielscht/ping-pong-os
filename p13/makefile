@@ -37,6 +37,7 @@ disk.o: disk.c disk.h
 
 clean: 
 		rm -f *.o
+		cp clear-disk.dat disk.dat
 
 purge:  clean
 		rm -f test1 test2

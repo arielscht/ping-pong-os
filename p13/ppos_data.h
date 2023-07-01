@@ -53,6 +53,7 @@ typedef struct task_t
 } task_t;
 
 extern task_t *drivers_queue;
+extern int drivers_quantity;
 
 // estrutura que define um semáforo
 typedef struct
@@ -82,5 +83,7 @@ typedef struct
     semaphore_t buffer_semaphore;
     semaphore_t items_semaphore;
 } mqueue_t;
+
+int finish_drivers();
 
 #endif
